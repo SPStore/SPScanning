@@ -198,6 +198,10 @@ SPLogoKey const SPLogoImageShadowOffsetName = @"SPLogoImageShadowOffsetName";
 
 // 生成普通条形码
 + (UIImage *)generateBarCodeByString:(NSString *)text barSize:(CGSize)size {
+    if (!text.length || text == nil || [text isEqualToString:@""]) {
+        NSLog(@"字符串为空");
+        return nil;
+    }
     NSData *data = [text dataUsingEncoding:NSUTF8StringEncoding allowLossyConversion:false];
     CIFilter *filter = [CIFilter filterWithName:@"CICode128BarcodeGenerator"];
     [filter setValue:data forKey:@"inputMessage"];
@@ -269,7 +273,10 @@ SPLogoKey const SPLogoImageShadowOffsetName = @"SPLogoImageShadowOffsetName";
     CGImageRef scaledImage = CGBitmapContextCreateImage(bitmapRef);
     CGContextRelease(bitmapRef);
     CGImageRelease(bitmapImage);
-    return [UIImage imageWithCGImage:scaledImage];
+    CGColorSpaceRelease(cs);
+    UIImage *myImage = [UIImage imageWithCGImage:scaledImage];
+    CGImageRelease(scaledImage);
+    return myImage;
 }
 
 + (CIImage *)colorImage:(CIImage *)outputImage backgroundColor:(CIColor *)backgroundColor qrColor:(CIColor *)qrColor {

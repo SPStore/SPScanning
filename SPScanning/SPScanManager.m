@@ -8,7 +8,7 @@
 
 #import "SPScanManager.h"
 
-@interface SPScanManager() <AVCaptureMetadataOutputObjectsDelegate,AVCapturePhotoCaptureDelegate>
+@interface SPScanManager() <AVCaptureMetadataOutputObjectsDelegate,AVCapturePhotoCaptureDelegate,AVCaptureVideoDataOutputSampleBufferDelegate>
 {
     BOOL bNeedScanResult; // 为了禁止拍照也走扫描的代理方法，用这个属性作为禁止标记
 }
@@ -40,27 +40,28 @@
 
 static SPScanManager *_instance;
 
++ (instancetype)sharedScanManager {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        _instance = [[self alloc] init];
+    });
+    return _instance;
+}
+
 #pragma mark - public
 
-- (instancetype)initWithPreView:(UIView *)preView cropRect:(CGRect)cropRect objectType:(NSArray *)objType completed:(void (^)(NSArray<SPScanResult *> *))completedBlock {
-    if (self = [super init]) {
-        [self configureWithPreView:preView cropRect:cropRect objectType:objType sessionPreset:nil videoGravit:nil completed:completedBlock];
-    }
-    return self;
+- (void)scanWithPreView:(UIView *)preView cropRect:(CGRect)cropRect objectType:(NSArray *)objType completed:(void (^)(NSArray<SPScanResult *> *))completedBlock {
+    [self configureWithPreView:preView cropRect:cropRect objectType:objType sessionPreset:nil videoGravit:nil completed:completedBlock];
 }
 
 
-- (instancetype)initWithPreView:(UIView *)preView
+- (void)scanWithPreView:(UIView *)preView
                        cropRect:(CGRect)cropRect
                      objectType:(NSArray*)objType
                   sessionPreset:(AVCaptureSessionPreset)sessionPreset
                     videoGravit:(AVLayerVideoGravity)videoGravit
                       completed:(void(^)(NSArray<SPScanResult *> *array))completedBlock {
-    
-    if (self = [super init]) {
-        [self configureWithPreView:preView cropRect:cropRect objectType:objType sessionPreset:sessionPreset videoGravit:videoGravit completed:completedBlock];
-    }
-    return self;
+    [self configureWithPreView:preView cropRect:cropRect objectType:objType sessionPreset:sessionPreset videoGravit:videoGravit completed:completedBlock];
 }
 
 - (void)configureWithPreView:(UIView *)preView
@@ -80,6 +81,7 @@ static SPScanManager *_instance;
     if (!device) {
         return;
     }
+    
     // 创建设备输入流
     AVCaptureDeviceInput *deviceInput = [AVCaptureDeviceInput deviceInputWithDevice:device error:nil];
     if (!deviceInput) {
@@ -110,6 +112,8 @@ static SPScanManager *_instance;
         [stillImageOutput setOutputSettings:outputSettings];
         _stillImageOutput = stillImageOutput;
     }
+    AVCaptureVideoDataOutput *videoOutput = [[AVCaptureVideoDataOutput alloc] init];
+    [videoOutput setSampleBufferDelegate:self queue:dispatch_get_main_queue()];
     bNeedScanResult = YES;
     
     // 创建会话对象
@@ -132,6 +136,9 @@ static SPScanManager *_instance;
     if ([_session canAddOutput:_photoOutput]) {
         [_session addOutput:_photoOutput];       // 拍照
     }
+    if ([_session canAddOutput:videoOutput]) { // 用于获取光线亮度
+        [_session addOutput:videoOutput];
+    }
     
     // 如果编码格式为空，使用默认编码格式
     if (!objType) {
@@ -142,12 +149,18 @@ static SPScanManager *_instance;
     
     // 实例化预览图层, 传递_session是为了告诉图层将来显示什么内容
     _previewLayer = [AVCaptureVideoPreviewLayer layerWithSession:_session];
+
     // 设置填充模式
     _previewLayer.videoGravity = videoGravit;
-    // 设置frame
-    CGRect frame = preView.frame;
-    frame.origin = CGPointZero;
-    _previewLayer.frame = frame;
+
+    CGSize size = [preView systemLayoutSizeFittingSize:UILayoutFittingCompressedSize];
+    if (!CGSizeEqualToSize(size, CGSizeZero)) {
+        // 设置frame
+        _previewLayer.frame = (CGRect){{0,0},size};
+    } else {
+        [preView layoutIfNeeded];
+        _previewLayer.frame = preView.bounds;
+    }
     // 添加预览图层
     [preView.layer insertSublayer:_previewLayer atIndex:0];
     
@@ -161,14 +174,15 @@ static SPScanManager *_instance;
         [deviceInput.device unlockForConfiguration];
     }
     
-    if (!CGRectEqualToRect(cropRect, CGRectZero)) {
-        // 设置有效扫描区域
-        [self coverToMetadataOutputRectOfInterestForRect:cropRect];
-    }
+    // 设置有效扫描区域
+    [self coverToMetadataOutputRectOfInterestForRect:cropRect];
 }
 
 // 此方法类似于系统的metadataOutputRectOfInterestForRect
 - (void)coverToMetadataOutputRectOfInterestForRect:(CGRect)cropRect {
+    if (CGRectEqualToRect(cropRect, CGRectZero)) {
+        return;
+    }
     CGSize size = _previewLayer.bounds.size;
     CGFloat p1 = size.height/size.width;
     CGFloat p2 = 0.0;
@@ -265,6 +279,15 @@ static SPScanManager *_instance;
     }
 }
 
+- (void)updatePreViewLayerFrame {
+    
+    self.previewLayer.frame = self.preView.bounds;
+    // 特别要注意的是previewLayer的frame改变后，需要重新置videoGravity属性
+    self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    // 重新设置有效扫描区域
+    [self coverToMetadataOutputRectOfInterestForRect:_cropRect];
+}
+
 #pragma mark - setter
 // 是否需要拍照
 - (void)setNeedCaptureImage:(BOOL)needCaptureImage {
@@ -297,7 +320,10 @@ static SPScanManager *_instance;
 // 开关手电筒
 - (void)setTorchOn:(BOOL)torchOn {
     _torchOn = torchOn;
-    AVCaptureDevice *device = self.deviceInput.device;
+    // 获取当前设备
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    // 不要用这种方式获取设备，因为如果没有开启相机权限，self.deviceInput为nil，从而导致获取的device也是nil
+    //AVCaptureDevice *device = self.deviceInput.device;
     if ([device hasTorch]) {
         [device lockForConfiguration:nil];
         [device setTorchMode: torchOn ? AVCaptureTorchModeOn : AVCaptureTorchModeOff];
@@ -366,7 +392,7 @@ static SPScanManager *_instance;
                  }
              }
              if (self.blockScanResult) {
-                 self.blockScanResult(_arrayResult);
+                 self.blockScanResult(self.arrayResult);
              }
          }];
     }
@@ -391,7 +417,6 @@ static SPScanManager *_instance;
         return;
     }
     bNeedScanResult = NO;
-
     if (!_arrayResult) {
         self.arrayResult = [NSMutableArray arrayWithCapacity:1];
     } else {
@@ -401,7 +426,7 @@ static SPScanManager *_instance;
     for(AVMetadataObject *current in metadataObjects) {
         if ([current isKindOfClass:[AVMetadataMachineReadableCodeObject class]]) {
             bNeedScanResult = NO;
-            NSString *scannedResult = [(AVMetadataMachineReadableCodeObject *) current stringValue];
+            NSString *scannedResult = [(AVMetadataMachineReadableCodeObject *)current stringValue];
             if (scannedResult && ![scannedResult isEqualToString:@""]) {
                 SPScanResult *result = [SPScanResult new];
                 result.strScanned = scannedResult;
@@ -420,6 +445,18 @@ static SPScanManager *_instance;
         }
     }
 }
+
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
+    CFDictionaryRef metadataDict = CMCopyDictionaryOfAttachments(NULL,sampleBuffer, kCMAttachmentMode_ShouldPropagate);
+    NSDictionary *metadata = [[NSMutableDictionary alloc] initWithDictionary:(__bridge NSDictionary*)metadataDict];
+    CFRelease(metadataDict);
+    NSDictionary *exifMetadata = [[metadata objectForKey:(NSString *)kCGImagePropertyExifDictionary] mutableCopy];
+    float brightnessValue = [[exifMetadata objectForKey:(NSString *)kCGImagePropertyExifBrightnessValue] floatValue];
+    if ([self.delegate respondsToSelector:@selector(scanManagerBrightnessValueDidChanged:)]) {
+        [self.delegate scanManagerBrightnessValueDidChanged:brightnessValue];
+    }
+}
+                           
 
 #pragma mark - AVCapturePhotoCaptureDelegate
 
@@ -443,7 +480,9 @@ static SPScanManager *_instance;
 }
 #pragma clang diagnostic pop
 
-
+- (void)dealloc {
+    NSLog(@"scanManager销毁");
+}
 @end
 
 

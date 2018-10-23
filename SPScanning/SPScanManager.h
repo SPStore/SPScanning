@@ -11,7 +11,17 @@
 #import <AVFoundation/AVFoundation.h>
 #import "SPScanResult.h"
 
+@protocol SPScanManagerDelegate <NSObject>
+@optional;
+// 光线亮度(拍照画面的环境光)发生了改变
+- (void)scanManagerBrightnessValueDidChanged:(float)brightnessValue;
+@end
+
 @interface SPScanManager : NSObject
+
++ (instancetype)sharedScanManager;
+
+@property (nonatomic, weak) id<SPScanManagerDelegate> delegate;
 
 /**
  @brief          初始化采集相机
@@ -19,9 +29,8 @@
  @param cropRect 有效识别区域，CGRectZero则默认为preView的全部区域
  @param objType  识别码类型：如果为nil，默认支持很多类型。(二维码如QR：AVMetadataObjectTypeQRCode,条码如：AVMetadataObjectTypeCode93Code)
  @param completedBlock   识别结果
- @return SPScanManager的实例
  */
-- (instancetype)initWithPreView:(UIView *)preView
+- (void)scanWithPreView:(UIView *)preView
                        cropRect:(CGRect)cropRect
                      objectType:(NSArray *)objType
                       completed:(void(^)(NSArray<SPScanResult *> *array))completedBlock;
@@ -34,9 +43,8 @@
  @param sessionPreset 图像、音频等输出分辨率,如果传nil，默认以高质量(AVCaptureSessionPresetHigh)分辨率输出
  @param videoGravit   输出模式，如果为nil,默认为AVLayerVideoGravityResizeAspectFill
  @param completedBlock   识别结果
- @return SPScanManager的实例
  */
-- (instancetype)initWithPreView:(UIView *)preView
+- (void)scanWithPreView:(UIView *)preView
                        cropRect:(CGRect)cropRect
                      objectType:(NSArray *)objType
                   sessionPreset:(AVCaptureSessionPreset)sessionPreset
@@ -52,6 +60,12 @@
  *  停止扫描
  */
 - (void)stopScan;
+
+/**
+ *  更新预览视图的frame，preViewLayer的frame依赖的是preView，但是如果preView是由xib生成的，有时preView的frame是不准的，例如在控制器的viewDidLoad中就是不准的。所以以下这个方法，保证能够在恰当的时刻更新preViewLayer的frame
+ */
+- (void)updatePreViewLayerFrame;
+
 
 /**
  *  修改扫码类型：二维码、条形码,如:AVMetadataObjectTypeQRCode,AVMetadataObjectTypeCode39Code等
@@ -72,6 +86,7 @@
  *  拉近拉远镜头
  */
 @property (nonatomic, assign) CGFloat videoScale;
+
 
 #pragma mark --识别图片
 /**

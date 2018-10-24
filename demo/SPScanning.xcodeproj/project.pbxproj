@@ -28,6 +28,7 @@
 		6A3BD340218030E100A3BF4C /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6A3BD2EA2180058000A3BF4C /* ViewController.m */; };
 		6A3BD34421803E9A00A3BF4C /* SPButton.m in Sources */ = {isa = PBXBuildFile; fileRef = 6A3BD34321803E9A00A3BF4C /* SPButton.m */; };
 		6A3BD3532180465200A3BF4C /* logo.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 6A3BD3522180465200A3BF4C /* logo.jpg */; };
+		6A3BD35621804C6100A3BF4C /* ScanResultViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 6A3BD35521804C6100A3BF4C /* ScanResultViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +83,8 @@
 		6A3BD34221803E9A00A3BF4C /* SPButton.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPButton.h; sourceTree = "<group>"; };
 		6A3BD34321803E9A00A3BF4C /* SPButton.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPButton.m; sourceTree = "<group>"; };
 		6A3BD3522180465200A3BF4C /* logo.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = logo.jpg; sourceTree = "<group>"; };
+		6A3BD35421804C6100A3BF4C /* ScanResultViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ScanResultViewController.h; sourceTree = "<group>"; };
+		6A3BD35521804C6100A3BF4C /* ScanResultViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ScanResultViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,6 +203,8 @@
 				6A3BD33721800AAE00A3BF4C /* CodeReaderView.m */,
 				6A3BD33921800AAE00A3BF4C /* ScanAreaView.h */,
 				6A3BD33A21800AAE00A3BF4C /* ScanAreaView.m */,
+				6A3BD35421804C6100A3BF4C /* ScanResultViewController.h */,
+				6A3BD35521804C6100A3BF4C /* ScanResultViewController.m */,
 			);
 			path = "扫一扫";
 			sourceTree = "<group>";
@@ -357,6 +362,7 @@
 				6A3BD33F2180100D00A3BF4C /* AppDelegate.m in Sources */,
 				6A3BD34421803E9A00A3BF4C /* SPButton.m in Sources */,
 				6A3BD33E21800F7B00A3BF4C /* main.m in Sources */,
+				6A3BD35621804C6100A3BF4C /* ScanResultViewController.m in Sources */,
 				6A3BD3212180066500A3BF4C /* SPScanResult.m in Sources */,
 				6A3BD3332180090300A3BF4C /* ScanViewController.m in Sources */,
 				6A3BD33B21800AAE00A3BF4C /* CodeReaderView.m in Sources */,

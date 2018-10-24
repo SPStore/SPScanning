@@ -11,6 +11,7 @@
 #import "CodeReaderView.h"
 #import "ScanAreaView.h"
 #import "SPButton.h"
+#import "ScanResultViewController.h"
 
 @interface ScanViewController () <SPScanManagerDelegate,CodeReaderViewDelegate>
 @property (nonatomic, weak) SPButton *torchButton; // 手电筒
@@ -30,6 +31,11 @@
 
     [[SPScanManager sharedScanManager] scanWithPreView:self.readerView scanRect:CGRectZero objectType:nil completed:^(NSArray<SPScanResult *> *array) {
         NSLog(@"扫描结果=%@",array);
+        SPScanResult *result = [array firstObject];
+        ScanResultViewController *resultVc = [[ScanResultViewController alloc] init];
+        UINavigationController *navi = [[UINavigationController alloc] initWithRootViewController:resultVc];
+        resultVc.result = result.strScanned;
+        [self presentViewController:navi animated:YES completion:nil];
     }];
     [SPScanManager sharedScanManager].delegate = self;
     [[SPScanManager sharedScanManager] startScan];

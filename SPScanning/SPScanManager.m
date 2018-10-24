@@ -24,8 +24,6 @@
 #pragma clang diagnostic pop
 @property (nonatomic, strong) AVCaptureSession *session;
 @property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
-// 扫码区域
-@property (nonatomic, assign) CGRect cropRect;
 // 扫码结果数组
 @property (nonatomic, strong) NSMutableArray<SPScanResult *> *arrayResult;
 // 扫码类型
@@ -74,7 +72,7 @@ static SPScanManager *_instance;
     self.arrayBarCodeType = objType;
     self.blockScanResult = completedBlock;
     self.preView = preView;
-    self.cropRect = cropRect;
+    _cropRect = cropRect;
     
     // 获取摄像设备
     AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
@@ -112,10 +110,12 @@ static SPScanManager *_instance;
         [stillImageOutput setOutputSettings:outputSettings];
         _stillImageOutput = stillImageOutput;
     }
+
+    bNeedScanResult = YES;
+
     AVCaptureVideoDataOutput *videoOutput = [[AVCaptureVideoDataOutput alloc] init];
     [videoOutput setSampleBufferDelegate:self queue:dispatch_get_main_queue()];
-    bNeedScanResult = YES;
-    
+
     // 创建会话对象
     _session = [[AVCaptureSession alloc] init];
     // 设置图像输出分辨率,通俗讲就是画面质量
@@ -175,6 +175,11 @@ static SPScanManager *_instance;
     }
     
     // 设置有效扫描区域
+    [self coverToMetadataOutputRectOfInterestForRect:cropRect];
+}
+
+- (void)setCropRect:(CGRect)cropRect {
+    _cropRect = cropRect;
     [self coverToMetadataOutputRectOfInterestForRect:cropRect];
 }
 
@@ -266,13 +271,12 @@ static SPScanManager *_instance;
     if (_deviceInput && !_session.running) {
         [_session startRunning];
         bNeedScanResult = YES;
+
     }
-    bNeedScanResult = YES;
 }
 
 // 停止扫描
 - (void)stopScan {
-    bNeedScanResult = NO;
     if (_deviceInput && _session.running) {
         [_session stopRunning];
         bNeedScanResult = NO;
@@ -480,9 +484,6 @@ static SPScanManager *_instance;
 }
 #pragma clang diagnostic pop
 
-- (void)dealloc {
-    NSLog(@"scanManager销毁");
-}
 @end
 
 

@@ -66,6 +66,11 @@
  */
 - (void)updatePreViewLayerFrame;
 
+/**
+ *  扫码区域
+ */
+@property (nonatomic, assign) CGRect cropRect;
+
 
 /**
  *  修改扫码类型：二维码、条形码,如:AVMetadataObjectTypeQRCode,AVMetadataObjectTypeCode39Code等

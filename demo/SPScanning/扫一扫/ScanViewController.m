@@ -113,7 +113,9 @@
     CGFloat c_y = _readerView.innerViewRect.origin.y;
     _scanAreaView.frame = rect;
     _torchButton.frame = CGRectMake((self.view.bounds.size.width-60)*0.5, c_y + c_width - 65, 60, 60);
-    _lblTip.frame = CGRectMake(0, c_y + c_width + 20, self.view.bounds.size.width, 15);
+
+    self.lblTip.frame = CGRectMake(0, c_y + c_width + 20, self.view.bounds.size.width, 15);
+    [self.lblTip layoutIfNeeded];
 
     // 执行扫描线动画
     [self.scanAreaView performAnimation];
